@@ -29,8 +29,7 @@ These instructions assume you are in a shell prompt on CHIP.
 
     If you plan to use GPIO inputs and/or outputs, you will need "gpio_sh" package, installable like this:
 
-        sudo wget -O /usr/local/bin/gpio.sh http://fordsfords.github.io/gpio_sh/gpio.sh
-
+        sudo wget -O /usr/local/bin/gpio.sh https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/gpio.sh
     (See https://github.com/fordsfords/gpio_sh/tree/gh-pages for details of "gpio_sh".)
 
 2. If you have an earlier version of blink running, kill it:
@@ -43,14 +42,14 @@ These instructions assume you are in a shell prompt on CHIP.
 
 3. Get the project files onto CHIP:
 
-        sudo wget -O /usr/local/bin/blink.sh http://fordsfords.github.io/blink/blink.sh
+        sudo wget -O /usr/local/bin/blink.sh https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.sh
         sudo chmod +x /usr/local/bin/blink.sh
-        sudo wget -O /etc/systemd/system/blink.service http://fordsfords.github.io/blink/blink.service
+        sudo wget -O /etc/systemd/system/blink.service https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.service
         sudo systemctl enable /etc/systemd/system/blink.service
 
     If installing blink for the first time, get the configuration file:
 
-        sudo wget -O /usr/local/etc/blink.cfg http://fordsfords.github.io/blink/blink.cfg
+        sudo wget -O /usr/local/etc/blink.cfg https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.cfg
 
     If upgrading blink and have a configuration file, you can skip that step.
 
