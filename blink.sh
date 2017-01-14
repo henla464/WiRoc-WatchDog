@@ -145,6 +145,15 @@ init_blink_gpio()
   fi
 }
 
+#set_blink_gpio()
+#{
+#  if [ -n "$BLINK_GPIO" ]; then :
+#    GPIO_LED=$(1)
+#    gpio_output $BLINK_GPIO $GPIO_LED
+#  fi
+#}
+
+
 invert_blink_gpio()
 {
   if [ -n "$BLINK_GPIO" ]; then :
@@ -382,6 +391,14 @@ init_blink_status()
   fi
 }
 
+#set_blink_status()
+#{
+#  if [ -n "$BLINK_STATUS" ]; then :
+#    STATUS_LED=$(1)
+#    /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
+#  fi
+#}
+
 invert_blink_status()
 {
   if [ -n "$BLINK_STATUS" ]; then :
@@ -436,6 +453,12 @@ shutdown_now()
   shutdown -h now
 }
 
+#error_user()
+#{
+#   set_blink_status
+#   set_blink_gpio
+#   sleep 1
+#}
 
 warn_user()
 {
@@ -486,6 +509,9 @@ while true; do :
   check_shut
 
   check_warn
+
+#  check_error
+  if [ $NUM_WARNS -gt 0 ];]
   if [ $NUM_WARNS -gt 0 ]; then :
     warn_user
   else :
