@@ -145,13 +145,13 @@ init_blink_gpio()
   fi
 }
 
-#set_blink_gpio()
-#{
-#  if [ -n "$BLINK_GPIO" ]; then :
-#    GPIO_LED=$(1)
-#    gpio_output $BLINK_GPIO $GPIO_LED
-#  fi
-#}
+set_blink_gpio()
+{
+  if [ -n "$BLINK_GPIO" ]; then :
+    GPIO_LED=$(1)
+    gpio_output $BLINK_GPIO $GPIO_LED
+  fi
+}
 
 
 invert_blink_gpio()
@@ -299,6 +299,22 @@ check_warn_battery()
   fi
 }
 
+check_error_wirocble()
+{
+  if [ "`systemctl is-active WiRocBLE.service`" != "active" ] 
+  then
+    NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+  fi
+}
+
+check_error_wirocpython()
+{
+  if [ "`systemctl is-active WiRocPython.service`" != "active" ] 
+  then
+    NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+  fi
+}
+
 init_mon_temperature()
 {
   if [ -n "$MON_TEMPERATURE" ]; then :
@@ -391,13 +407,13 @@ init_blink_status()
   fi
 }
 
-#set_blink_status()
-#{
-#  if [ -n "$BLINK_STATUS" ]; then :
-#    STATUS_LED=$(1)
-#    /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
-#  fi
-#}
+set_blink_status()
+{
+  if [ -n "$BLINK_STATUS" ]; then :
+    STATUS_LED=$(1)
+    /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
+  fi
+}
 
 invert_blink_status()
 {
@@ -446,6 +462,13 @@ check_warn()
   check_warn_temperature
 }
 
+check_error()
+{
+  NUM_ERRORS=0
+  check_error_wirocble
+  check_error_wirocpython
+}
+
 
 shutdown_now()
 {
@@ -453,12 +476,12 @@ shutdown_now()
   shutdown -h now
 }
 
-#error_user()
-#{
-#   set_blink_status
-#   set_blink_gpio
-#   sleep 1
-#}
+error_user()
+{
+   set_blink_status
+   set_blink_gpio
+   sleep 1
+}
 
 warn_user()
 {
@@ -510,9 +533,11 @@ while true; do :
 
   check_warn
 
-#  check_error
-  if [ $NUM_WARNS -gt 0 ];]
-  if [ $NUM_WARNS -gt 0 ]; then :
+  check_error
+
+  if [ $NUM_ERRORS -gt 0 ]; then :
+    error_user
+  elif [ $NUM_WARNS -gt 0 ]; then :
     warn_user
   else :
     blink_user
