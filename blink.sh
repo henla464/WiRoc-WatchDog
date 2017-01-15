@@ -38,7 +38,7 @@ blink_error()
     echo "blink: $1"
     shift    # get next error string into $1
   done
-  exit 1
+  #exit 1
 }
 
 
@@ -148,7 +148,7 @@ init_blink_gpio()
 set_blink_gpio()
 {
   if [ -n "$BLINK_GPIO" ]; then :
-    GPIO_LED=$(1)
+    GPIO_LED=1
     gpio_output $BLINK_GPIO $GPIO_LED
   fi
 }
@@ -410,7 +410,7 @@ init_blink_status()
 set_blink_status()
 {
   if [ -n "$BLINK_STATUS" ]; then :
-    STATUS_LED=$(1)
+    STATUS_LED=1
     /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
   fi
 }
