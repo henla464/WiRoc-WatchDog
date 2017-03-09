@@ -315,6 +315,14 @@ check_error_wirocpython()
   fi
 }
 
+check_error_wirocpythonws()
+{
+  if [ "`systemctl is-active WiRocPythonWS.service`" != "active" ] 
+  then
+    NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+  fi
+}
+
 init_mon_temperature()
 {
   if [ -n "$MON_TEMPERATURE" ]; then :
@@ -467,6 +475,7 @@ check_error()
   NUM_ERRORS=0
   check_error_wirocble
   check_error_wirocpython
+  check_error_wirocpythonws
 }
 
 
