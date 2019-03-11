@@ -178,14 +178,19 @@ sample_mon_reset()
 {
   if [ -n "$MON_RESET" ]; then :
     REG4AH=$(i2cget -f -y 0 0x34 0x4a)  # Read AXP209 register 4AH
-    BUTTON=$(( $REG4AH & 0x01 ))        # mask off the pek press bit
-    if [ $BUTTON -eq 0 ]; then :
-      MON_RESET_SAMPLE=0
+    if [! -z "$REG4AH" ]; then :
+      BUTTON=$(( $REG4AH & 0x01 ))        # mask off the pek press bit
+      if [ $BUTTON -eq 0 ]; then :
+        MON_RESET_SAMPLE=0
+      else :
+        MON_RESET_SAMPLE=1
+      fi
     else :
-      MON_RESET_SAMPLE=1
+      MON_RESET_SAMPLE=0
     fi
   fi
 }
+
 
 check_shut_reset()
 {
@@ -238,11 +243,15 @@ sample_mon_battery()
     # So assume the battery is NOT discharging when MicroUSB and/or CHG-IN
     # are present (i.e. when chip is "powered").
     REG00H=$(i2cget -f -y 0 0x34 0x00)    # Read AXP209 register 00H
-    PWR_BITS=$(( $REG00H & 0x50 ))        # ACIN usalbe and VBUS usable bits
-    if [ $PWR_BITS -ne 0 ]; then :
+    if [ ! -z "$REG00H" ]; then :
+      PWR_BITS=$(( $REG00H & 0x50 ))        # ACIN usalbe and VBUS usable bits
+      if [ $PWR_BITS -ne 0 ]; then :
+        MON_BATTERY_SAMPLE_PWR=1
+      else
+        MON_BATTERY_SAMPLE_PWR=0
+      fi
+    else :
       MON_BATTERY_SAMPLE_PWR=1
-    else
-      MON_BATTERY_SAMPLE_PWR=0
     fi
   fi
 }
@@ -482,6 +491,14 @@ check_error()
 shutdown_now()
 {
   echo "Shutdown, reason='$1'"
+  # turn on the status light on the board
+  /usr/sbin/i2cset -f -y 0 0x34 0x93 0
+  # set shutdown delay to 10 seconds
+  /usr/sbin/i2cset -y -f 0 0x34 0x36 0x9F
+  # Set gpio2 on axp209 to low, this will shutdown the axp209 after the shutdown delay (if gpio2 connected to power-on/off pin)
+  # (this should maybe be run in separate process run later in the shutdown sequence)
+  /usr/sbin/i2cset -f -y 0 0x34 0x93 0x00
+
   shutdown -h now
 }
 

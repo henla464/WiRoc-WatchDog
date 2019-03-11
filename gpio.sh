@@ -91,7 +91,8 @@ gpio_input()
 
 # Create hash (associative array) for pins
 declare -A GPIO_HASH
-
+#LED used for nanopiair
+GPIO_HASH["LED"]=6
 GPIO_HASH["PWM0"]=34
 GPIO_HASH["AP_EINT3"]=35
 GPIO_HASH["TWI1_SCK"]=47
