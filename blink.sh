@@ -377,11 +377,13 @@ check_shut_temperature()
 check_warn_temperature()
 {
   if [ -n "$MON_TEMPERATURE" -a -n "$WARN_TEMPERATURE" ]; then :
+    #curl -d "msg='Temp:$MON_TEMPERATURE_SAMPLE'" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://192.168.11.112:3000
     # Check if already in temperature warning state.
     if [ -n "$TEMPERATURE_WARN_STATE" ]; then :
       # To prevent rapid flapping between warn and non-warn, while
       # in temperature warning state, require temperature drop 1.1 degree below
       # warning temperature to exit warning state (adds hysteresis).
+
       TEST_TEMPERATURE=$(( $WARN_TEMPERATURE - 11 ))
       if [ $MON_TEMPERATURE_SAMPLE -gt $TEST_TEMPERATURE ]; then :
         # Temperature still in warning.  Already in warning state.
@@ -491,6 +493,7 @@ check_error()
 shutdown_now()
 {
   echo "Shutdown, reason='$1'"
+  #curl -d "msg='$1'" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://192.168.11.112:3000
   # turn on the status light on the board
   /usr/sbin/i2cset -f -y 0 0x34 0x93 0
   # set shutdown delay to 10 seconds

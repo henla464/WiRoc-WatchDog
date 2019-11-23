@@ -139,17 +139,17 @@ GPIO_HASH["UART1_RX"]=196
 
 # The XIO pins change their base number across different versions of CHIPOS.
 # Derive the correct base number.
-XIO_LABEL_FILE=`grep -l pcf8574a /sys/class/gpio/*/*label`
-XIO_BASE_FILE=`dirname $XIO_LABEL_FILE`/base
-XIO_BASE=`cat $XIO_BASE_FILE`
-GPIO_HASH["XIO_P0"]=$XIO_BASE
-GPIO_HASH["XIO_P1"]=$((XIO_BASE + 1))
-GPIO_HASH["XIO_P2"]=$((XIO_BASE + 2))
-GPIO_HASH["XIO_P3"]=$((XIO_BASE + 3))
-GPIO_HASH["XIO_P4"]=$((XIO_BASE + 4))
-GPIO_HASH["XIO_P5"]=$((XIO_BASE + 5))
-GPIO_HASH["XIO_P6"]=$((XIO_BASE + 6))
-GPIO_HASH["XIO_P7"]=$((XIO_BASE + 7))
+#XIO_LABEL_FILE=`grep -l pcf8574a /sys/class/gpio/*/*label`
+#XIO_BASE_FILE=`dirname $XIO_LABEL_FILE`/base
+#XIO_BASE=`cat $XIO_BASE_FILE`
+#GPIO_HASH["XIO_P0"]=$XIO_BASE
+#GPIO_HASH["XIO_P1"]=$((XIO_BASE + 1))
+#GPIO_HASH["XIO_P2"]=$((XIO_BASE + 2))
+#GPIO_HASH["XIO_P3"]=$((XIO_BASE + 3))
+#GPIO_HASH["XIO_P4"]=$((XIO_BASE + 4))
+#GPIO_HASH["XIO_P5"]=$((XIO_BASE + 5))
+#GPIO_HASH["XIO_P6"]=$((XIO_BASE + 6))
+#GPIO_HASH["XIO_P7"]=$((XIO_BASE + 7))
 
 # Scan the hash and create individual shell variables for each pin
 for GPIO in ${!GPIO_HASH[*]}; do :
