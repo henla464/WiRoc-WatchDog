@@ -1,12 +1,13 @@
 # blink.service -- version: "17-Sep-2016"
 # See https://github.com/henla464/WiRoc-Monitor
 [Unit]
-Description=blink: graceful shutdown and monitor service
+Description=WiRoc-WatchDog: graceful shutdown and monitor service
 After=default.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/blink.sh
+WorkingDirectory=/home/chip/WiRoc-WatchDog
+ExecStart=/home/chip/WiRoc-WatchDog/WiRoc-WatchDog.sh
 Restart=always
 RestartSec=2
 

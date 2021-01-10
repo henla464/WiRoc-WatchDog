@@ -18,7 +18,11 @@ blink_cleanup()
 {
   # Only un-export ports that we actually exported.
   if [ -n "$MON_GPIO_SET" ]; then gpio_unexport $MON_GPIO; fi
-  if [ -n "$BLINK_GPIO_SET" ]; then gpio_unexport $BLINK_GPIO; fi
+  hwVersion =`cat /home/chip/WiRocHWVersion.txt`
+  if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+  then
+    if [ -n "$BLINK_GPIO_SET" ]; then gpio_unexport $BLINK_GPIO; fi
+  fi
   if [ -n "$WARN_BATTERY_GPIO_SET" ]; then gpio_unexport $WARN_BATTERY_GPIO; fi
   if [ -n "$WARN_TEMPERATURE_GPIO_SET" ]; then gpio_unexport $WARN_TEMPERATURE_GPIO; fi
 }
@@ -82,8 +86,8 @@ read_config()
   WARN_BATTERY_GPIO_SET=
   WARN_TEMPERATURE_GPIO_SET=
 
-  if [ -f /usr/local/etc/blink.cfg ]; then :
-    source /usr/local/etc/blink.cfg
+  if [ -f /home/chip/WiRoc-WatchDog/WiRoc-WatchDog.cfg ]; then :
+    source /home/chip/WiRoc-WatchDog/WiRoc-WatchDog.cfg
   else :
     MON_RESET=1
     BLINK_STATUS=1
@@ -130,36 +134,60 @@ check_shut_gpio()
 
 init_blink_gpio()
 {
-  if [ -n "$BLINK_GPIO" ]; then :
-    check_gpio_installed
+   hwVersion =`cat /home/chip/WiRocHWVersion.txt`
+   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]; then :
+     if [ -n "$BLINK_GPIO" ]; then :
+       check_gpio_installed
 
-    gpio_export $BLINK_GPIO; ST=$?
-    if [ $ST -ne 0 ]; then :
-      blink_error "cannot export $BLINK_GPIO for blinking (in use?)"
-    fi
-    BLINK_GPIO_SET=1
-    gpio_direction $BLINK_GPIO out
+       gpio_export $BLINK_GPIO; ST=$?
+       if [ $ST -ne 0 ]; then :
+         blink_error "cannot export $BLINK_GPIO for blinking (in use?)"
+       fi
+       BLINK_GPIO_SET=1
+       gpio_direction $BLINK_GPIO out
 
-    GPIO_LED=1
-    gpio_output $BLINK_GPIO $GPIO_LED
-  fi
+       GPIO_LED=1
+       gpio_output $BLINK_GPIO $GPIO_LED
+     fi
+   else
+     echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
+   fi
 }
 
 set_blink_gpio()
 {
-  if [ -n "$BLINK_GPIO" ]; then :
-    GPIO_LED=1
-    gpio_output $BLINK_GPIO $GPIO_LED
-  fi
+   hwVersion =`cat /home/chip/WiRocHWVersion.txt`
+   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+   then
+     if [ -n "$BLINK_GPIO" ] 
+     then 
+       GPIO_LED=1
+       gpio_output $BLINK_GPIO $GPIO_LED
+     fi
+   else
+     echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
+   fi
 }
 
 
 invert_blink_gpio()
 {
-  if [ -n "$BLINK_GPIO" ]; then :
-    GPIO_LED=$(( 1 - $GPIO_LED ))
-    gpio_output $BLINK_GPIO $GPIO_LED
-  fi
+   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+   then
+     if [[ -n "$BLINK_GPIO" ]]
+     then
+       GPIO_LED=$(( 1 - $GPIO_LED ))
+       gpio_output $BLINK_GPIO $GPIO_LED
+     fi
+   else
+     GPIO_LED=$(( 1 - $GPIO_LED ))
+     if [[ "$GPIO_LED" = "1"]]
+     then
+       echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
+     else
+       echo "none" > /sys/class/leds/nanopi\:blue\:status/trigger
+     if
+   fi
 }
 
 
@@ -310,9 +338,17 @@ check_warn_battery()
 
 check_error_wirocble()
 {
-  if [ "`systemctl is-active WiRocBLE.service`" != "active" ] 
+  if [[ $(hostname -s) = "nanopiair" ]]
   then
-    NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+    if [ "`systemctl is-active WiRocBLEAPI.service`" != "active" ] 
+    then
+      NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+    fi
+  else
+    if [ "`systemctl is-active WiRocBLE.service`" != "active" ] 
+    then
+      NUM_ERRORS=$(( $NUM_ERRORS + 1 ))
+    fi
   fi
 }
 
@@ -416,41 +452,12 @@ check_warn_temperature()
   fi
 }
 
-
-init_blink_status()
-{
-  if [ -n "$BLINK_STATUS" ]; then :
-    check_i2c_installed
-
-    STATUS_LED=1
-  fi
-}
-
-set_blink_status()
-{
-  if [ -n "$BLINK_STATUS" ]; then :
-    STATUS_LED=1
-    /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
-  fi
-}
-
-invert_blink_status()
-{
-  if [ -n "$BLINK_STATUS" ]; then :
-    STATUS_LED=$(( 1 - $STATUS_LED ))
-    /usr/sbin/i2cset -f -y 0 0x34 0x93 $STATUS_LED
-  fi
-}
-
-
 init_externals()
 {
   init_mon_reset
   init_mon_gpio
   init_mon_battery
   init_mon_temperature
-
-  init_blink_status
   init_blink_gpio
 }
 
@@ -459,7 +466,6 @@ init_externals()
 sample_externals()
 {
   sample_mon_reset
-  sample_mon_gpio
   sample_mon_battery
   sample_mon_temperature
 }
@@ -468,7 +474,6 @@ sample_externals()
 check_shut()
 {
   check_shut_reset
-  check_shut_gpio
   check_shut_battery
   check_shut_temperature
 }
@@ -507,7 +512,6 @@ shutdown_now()
 
 error_user()
 {
-   set_blink_status
    set_blink_gpio
    sleep 1
 }
@@ -515,20 +519,14 @@ error_user()
 warn_user()
 {
   for I in 1 2 3 4; do :
-    invert_blink_status
-
     invert_blink_gpio
-
     sleep 0.25
   done
 }
 
 blink_user()
 {
-  invert_blink_status
-
   invert_blink_gpio
-
   sleep 1
 }
 

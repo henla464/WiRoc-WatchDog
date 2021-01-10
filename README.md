@@ -1,4 +1,4 @@
-# WiRoc-Monitor
+# WiRoc-WatchDog
 
 This is based on the blink program and is forked from https://github.com/fordsfords/blink/tree/gh-pages
 
@@ -42,26 +42,26 @@ These instructions assume you are in a shell prompt on CHIP.
 
 3. Get the project files onto CHIP:
 
-        sudo wget -O /usr/local/bin/blink.sh https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.sh
+        sudo wget -O /usr/local/bin/blink.sh https://raw.githubusercontent.com/henla464/WiRoc-WatchDog/master/blink.sh
         sudo chmod +x /usr/local/bin/blink.sh
-        sudo wget -O /etc/systemd/system/blink.service https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.service
+        sudo wget -O /etc/systemd/system/blink.service https://raw.githubusercontent.com/henla464/WiRoc-WatchDog/master/WiRoc-WatchDog.service
         sudo systemctl enable /etc/systemd/system/blink.service
 
     If installing blink for the first time, get the configuration file:
 
-        sudo wget -O /usr/local/etc/blink.cfg https://raw.githubusercontent.com/henla464/WiRoc-Monitor/master/blink.cfg
+        sudo wget -O /usr/local/etc/blink.cfg https://raw.githubusercontent.com/henla464/WiRoc-WatchDog/master/WiRoc-WatchDog.cfg
 
     If upgrading blink and have a configuration file, you can skip that step.
 
 4. Now test it:
 
-        sudo service blink start
+        sudo service WiRoc-WatchDog start
 
 5. After a few seconds watching the blinking LED, briefly press the reset button and watch CHIP shut down.  Restart CHIP, and when it has completed its reboot, watch the status LED start to blink again.
 
 6. Check logging:
 
-        grep blink /var/log/syslog
+        grep WiRoc-WatchDog /var/log/syslog
 
 
 ## Details
@@ -82,12 +82,12 @@ Note that if blink shuts CHIP down due to low battery, it will not be possible t
 
 Since blink is a service, you can manually stop it with:
 
-        sudo service blink stop
+        sudo service WiRoc-WatchDog stop
 
 
 ## Configuring Blink
 
-Edit the file /usr/local/etc/blink.cfg it should look like this:
+Edit the file /usr/local/etc/WiRoc-WatchDog.cfg it should look like this:
 
         # blink.cfg -- version 24-Jul-2016
         # Configuration for /usr/local/bin/blink.sh which is normally
@@ -140,5 +140,5 @@ when the battery drops below 5%:
 
 ## Random Notes
 
-1. Blink logs informational (and maybe error) messages to /var/log/daemon.log
+1. WiRoc-WatchDog logs informational (and maybe error) messages to /var/log/daemon.log
 
