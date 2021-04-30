@@ -18,8 +18,8 @@ blink_cleanup()
 {
   # Only un-export ports that we actually exported.
   if [ -n "$MON_GPIO_SET" ]; then gpio_unexport $MON_GPIO; fi
-  hwVersion =`cat /home/chip/WiRocHWVersion.txt`
-  if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+  hwVersion=$(</home/chip/WiRocHWVersion.txt)
+  if [ "$hwVersion" = "v1Rev1" ] || [ "$hwVersion" = "v2Rev1" ] || [ "$hwVersion" = "v3Rev1" ] || [ "$hwVersion" = "v3Rev2" ]
   then
     if [ -n "$BLINK_GPIO_SET" ]; then gpio_unexport $BLINK_GPIO; fi
   fi
@@ -134,8 +134,9 @@ check_shut_gpio()
 
 init_blink_gpio()
 {
-   hwVersion =`cat /home/chip/WiRocHWVersion.txt`
-   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]; then :
+   hwVersion=$(</home/chip/WiRocHWVersion.txt)
+   if [ "$hwVersion" = "v1Rev1" ] || [ "$hwVersion" = "v2Rev1" ] || [ "$hwVersion" = "v3Rev1" ] || [ "$hwVersion" = "v3Rev2" ]
+   then
      if [ -n "$BLINK_GPIO" ]; then :
        check_gpio_installed
 
@@ -150,14 +151,15 @@ init_blink_gpio()
        gpio_output $BLINK_GPIO $GPIO_LED
      fi
    else
+     GPIO_LED=1
      echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
    fi
 }
 
 set_blink_gpio()
 {
-   hwVersion =`cat /home/chip/WiRocHWVersion.txt`
-   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+   hwVersion=$(</home/chip/WiRocHWVersion.txt)
+   if [ "$hwVersion" = "v1Rev1" ] || [ "$hwVersion" = "v2Rev1" ] || [ "$hwVersion" = "v3Rev1" ] || [ "$hwVersion" = "v3Rev2" ]
    then
      if [ -n "$BLINK_GPIO" ] 
      then 
@@ -165,6 +167,7 @@ set_blink_gpio()
        gpio_output $BLINK_GPIO $GPIO_LED
      fi
    else
+     GPIO_LED=1
      echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
    fi
 }
@@ -172,21 +175,22 @@ set_blink_gpio()
 
 invert_blink_gpio()
 {
-   if [[ "$hwVersion" = "v1Rev1" || "$hwVersion" = "v2Rev1" || "$hwVersion" = "v3Rev1"]]
+   hwVersion=$(</home/chip/WiRocHWVersion.txt)
+   if [ "$hwVersion" = "v1Rev1" ] || [ "$hwVersion" = "v2Rev1" ] || [ "$hwVersion" = "v3Rev1" ] || [ "$hwVersion" = "v3Rev2" ]
    then
-     if [[ -n "$BLINK_GPIO" ]]
+     if [ -n "$BLINK_GPIO" ]
      then
        GPIO_LED=$(( 1 - $GPIO_LED ))
        gpio_output $BLINK_GPIO $GPIO_LED
      fi
    else
      GPIO_LED=$(( 1 - $GPIO_LED ))
-     if [[ "$GPIO_LED" = "1"]]
+     if [ "$GPIO_LED" = "1" ]
      then
        echo "default-on" > /sys/class/leds/nanopi\:blue\:status/trigger
      else
        echo "none" > /sys/class/leds/nanopi\:blue\:status/trigger
-     if
+     fi
    fi
 }
 
@@ -338,7 +342,7 @@ check_warn_battery()
 
 check_error_wirocble()
 {
-  if [[ $(hostname -s) = "nanopiair" ]]
+  if [ $(hostname -s) = "nanopiair" ]
   then
     if [ "`systemctl is-active WiRocBLEAPI.service`" != "active" ] 
     then
