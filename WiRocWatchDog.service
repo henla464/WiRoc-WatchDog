@@ -1,5 +1,3 @@
-# blink.service -- version: "17-Sep-2016"
-# See https://github.com/henla464/WiRoc-Monitor
 [Unit]
 Description=WiRoc-WatchDog: graceful shutdown and monitor service
 After=default.target
@@ -7,7 +5,7 @@ After=default.target
 [Service]
 Type=simple
 WorkingDirectory=/home/chip/WiRoc-WatchDog
-ExecStart=/home/chip/WiRoc-WatchDog/WiRoc-WatchDog.sh
+ExecStart=/home/chip/WiRoc-WatchDog/WiRoc-WatchDog.py
 Restart=always
 RestartSec=2
 

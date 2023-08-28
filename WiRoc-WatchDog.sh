@@ -400,7 +400,11 @@ sample_mon_temperature()
 {
   if [ -n "$MON_TEMPERATURE" ]; then :
     TEMPERATURE_MSB=$(i2cget -y -f 0 0x34 0x5e)
+    echo $TEMPERATURE_MSB
+
     TEMPERATURE_LSB=$(i2cget -y -f 0 0x34 0x5f)
+    echo $TEMPERATURE_LSB
+
     MON_TEMPERATURE_SAMPLE=$(( ( ($TEMPERATURE_MSB << 4) | $TEMPERATURE_LSB ) - 1447 ))
   fi
 }
