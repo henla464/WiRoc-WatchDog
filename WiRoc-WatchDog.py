@@ -3,7 +3,7 @@ import subprocess
 import time
 import yaml
 import gpiod
-import smbus
+from smbus2 import SMBus
 import logging, logging.handlers
 import os
 
@@ -12,7 +12,7 @@ GreenNanoPiLEDPath = "/sys/class/leds/nanopi\\:blue\\:status/trigger"
 GpioLedPinNo = 6
 GpioLEDPath = f"/sys/class/gpio/gpio{GpioLedPinNo}/value"
 GpioLEDExportPath = "/sys/class/gpio/export"
-WARNING_INTERVAL = 1
+WARNING_INTERVAL = 0.5
 NORMAL_INTERVAL = 2
 TemperatureLevelWarning = 85.0
 TemperatureLevelTooHighForCurrentChargingSpeed = 83.0
@@ -344,7 +344,7 @@ def Init():
 	# Init battery
 	# force ADC enable for battery voltage and current
 	#i2cset -y -f 0 0x34 0x82 0xC3
-	I2CBus = smbus.SMBus(0)  # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1)
+	I2CBus = SMBus(0)  # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1)
 	I2CBus.write_byte_data(I2CAddressAXP209, ADC_ENABLE_REGADDR, 0xC3)
 
 	SetMaxPowerDrawUSB_NoLimit()
