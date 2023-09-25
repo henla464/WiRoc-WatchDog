@@ -6,6 +6,7 @@ import gpiod
 from smbus2 import SMBus
 import logging, logging.handlers
 import os
+import os.path
 
 # Configuration and settings
 GreenNanoPiLEDPath = "/sys/class/leds/nanopi\\:blue\\:status/trigger"
@@ -39,7 +40,6 @@ StatusLEDStateOn = False
 CurrentInterval = NORMAL_INTERVAL
 LEDPin = None
 I2CBus = None
-PMUIRQPin = None
 HardwareVersionAndRevision = None
 Logger = None
 
@@ -72,17 +72,17 @@ class Samplings:
 	@classmethod
 	def GetIsWiRocBLEAPIActive(cls):
 		res = subprocess.run(['systemctl', 'is-active', 'WiRocBLEAPI.service'], check=False, capture_output=True).stdout
-		return res == "active"
+		return res == b"active\n"
 
 	@classmethod
 	def GetIsWiRocPythonActive(cls):
 		res = subprocess.run(['systemctl', 'is-active', 'WiRocPython.service'], check=False, capture_output=True).stdout
-		return res == "active"
+		return res == b"active\n"
 
 	@classmethod
 	def GetIsWiRocPythonWSActive(cls):
 		res = subprocess.run(['systemctl', 'is-active', 'WiRocPythonWS.service'], check=False, capture_output=True).stdout
-		return res == "active"
+		return res == b"active\n"
 
 	@classmethod
 	def SampleReadings(cls):
@@ -307,7 +307,7 @@ def Init():
 	global UseGpioLED
 	global LEDPin
 	global I2CBus
-	global PMUIRQPin
+
 
 	# HW Version
 	f = open("/home/chip/settings.yaml", "r")
@@ -329,17 +329,11 @@ def Init():
 
 		chip = gpiod.chip('gpiochip0')
 		configOutput = gpiod.line_request()
-		configOutput.consumer = "wirocpython"
+		configOutput.consumer = "wirocwatchdog"
 		configOutput.request_type = gpiod.line_request.DIRECTION_OUTPUT
 
 		LEDPin = chip.get_line(GpioLedPinNo)
 		LEDPin.request(configOutput)
-
-	configInput = gpiod.line_request()
-	configInput.consumer = "wirocpython"
-	configInput.request_type = gpiod.line_request.DIRECTION_INPUT
-	PMUIRQPin = chip.get_line(3) # IRQ pin GPIOA3 Pin 15
-	PMUIRQPin.request(configInput)
 
 	# Init battery
 	# force ADC enable for battery voltage and current
@@ -351,6 +345,7 @@ def Init():
 
 
 def main():
+	filePathPMUIRQ: str = '/home/chip/PMUIRQ.txt'
 	global CurrentInterval
 	Init()
 	CurrentChargingSpeed = 4
@@ -381,7 +376,8 @@ def main():
 			if Evaluator.IsBatteryError():
 				Shutdown(f"Battery error: {Samplings.CurrentBatteryPercent}%")
 
-		if PMUIRQPin.get_value() == 0:
+		if os.path.exists(filePathPMUIRQ):
+			os.remove(filePathPMUIRQ)
 			if Samplings.GetIsLongKeyPress():
 				Shutdown("User did a Long key press")
 
