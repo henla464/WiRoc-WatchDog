@@ -23,6 +23,7 @@ BatteryLevelWarning = 9
 BatteryLevelError = 7
 
 # Constants
+POWERMODE_CHARGING_REGADDR = 0x01
 IRQ_STATUS_3_REGADDR = 0x4a
 IRQ_STATUS_4_REGADDR = 0x4b
 ADC_ENABLE_REGADDR = 0x82
@@ -53,6 +54,7 @@ class Samplings:
 	CurrentIsWiRocBLEAPIActive = True
 	CurrentIsWiRocPythonActive = True
 	CurrentIsWiRocPythonWSActive = True
+	IsCharging = True
 
 	@classmethod
 	def GetPMUTemperature(cls):
@@ -68,6 +70,12 @@ class Samplings:
 	def GetBatteryPercent(cls):
 		intPercentValue = I2CBus.read_byte_data(I2CAddressAXP209, POWER_MEASUREMENT_RESULT_REGADDR)
 		return intPercentValue
+
+	@classmethod
+	def GetBatteryIsCharging(cls):
+		intValue = I2CBus.read_byte_data(I2CAddressAXP209, POWERMODE_CHARGING_REGADDR)
+		isCharging = (intValue & 0x40) > 0
+		return isCharging
 
 	@classmethod
 	def GetIsWiRocBLEAPIActive(cls):
@@ -92,6 +100,7 @@ class Samplings:
 			cls.CurrentTemperature = cls.GetPMUTemperature()
 			cls.PreviousBatteryPercent = cls.CurrentBatteryPercent
 			cls.CurrentBatteryPercent = cls.GetBatteryPercent()
+			cls.IsCharging = cls.GetBatteryIsCharging()
 			cls.CurrentIsWiRocBLEAPIActive = cls.GetIsWiRocBLEAPIActive()
 			cls.CurrentIsWiRocPythonActive = cls.GetIsWiRocPythonActive()
 			cls.CurrentIsWiRocPythonWSActive = cls.GetIsWiRocPythonWSActive()
@@ -120,7 +129,10 @@ class Evaluator():
 
 	@classmethod
 	def IsBatteryWarning(cls):
-		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}")
+		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}% Battery charging: {Samplings.IsCharging}")
+		# Battery percentage returned is inaccurate when charging
+		if Samplings.IsCharging:
+			return False
 		if Samplings.CurrentBatteryPercent <= BatteryLevelWarning:
 			cls.Logger.warning(f"Battery is below {BatteryLevelWarning}%  -- WARNING")
 			return True
@@ -166,7 +178,10 @@ class Evaluator():
 
 	@classmethod
 	def IsBatteryError(cls):
-		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}%")
+		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}% Battery charging: {Samplings.IsCharging}")
+		# Battery percentage returned is inaccurate when charging
+		if Samplings.IsCharging:
+			return False
 		if Samplings.CurrentBatteryPercent < BatteryLevelError:
 			cls.Logger.error(f"Battery is below {BatteryLevelError}% ({Samplings.CurrentBatteryPercent}%)")
 			if Samplings.PreviousBatteryPercent < BatteryLevelError:
