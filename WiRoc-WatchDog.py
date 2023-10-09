@@ -192,14 +192,14 @@ class Evaluator():
 	@classmethod
 	def IsTemperatureLevelTooHighForCurrentCharging(cls):
 		if Samplings.CurrentTemperature > TemperatureLevelTooHighForCurrentChargingSpeed:
-			cls.Logger.debug(f"Temperature is above {TemperatureLevelTooHighForCurrentChargingSpeed}C ({Samplings.CurrentTemperature}C)")
+			cls.Logger.debug(f"Temperature is above {TemperatureLevelTooHighForCurrentChargingSpeed}C ({Samplings.CurrentTemperature}C) (Should decrease charging speed)")
 			return True
 		return False
 
 	@classmethod
 	def IsTemperatureLevelTooLowForCurrentCharging(cls):
 		if Samplings.CurrentTemperature < TemperatureLevelTooLowForCurrentChargingSpeed:
-			cls.Logger.debug(f"Temperature is below {TemperatureLevelTooLowForCurrentChargingSpeed}C ({Samplings.CurrentTemperature}C)")
+			cls.Logger.debug(f"Temperature is below {TemperatureLevelTooLowForCurrentChargingSpeed}C ({Samplings.CurrentTemperature}C) (OK to increase charging speed)")
 			return True
 		return False
 
