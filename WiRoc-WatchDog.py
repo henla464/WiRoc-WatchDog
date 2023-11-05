@@ -19,21 +19,28 @@ TemperatureLevelWarning = 85.0
 TemperatureLevelTooHighForCurrentChargingSpeed = 83.0
 TemperatureLevelTooLowForCurrentChargingSpeed = 75.0
 TemperatureLevelError = 90.0
-BatteryLevelWarning = 9
-BatteryLevelError = 7
+BatteryLevelWarning: int = 9
+BatteryLevelError: int = 7
 
 # Constants
-POWERMODE_CHARGING_REGADDR = 0x01
-IRQ_STATUS_3_REGADDR = 0x4a
-IRQ_STATUS_4_REGADDR = 0x4b
-ADC_ENABLE_REGADDR = 0x82
-POWER_MEASUREMENT_RESULT_REGADDR = 0xb9
-PEK_KEY_SETTINGS_REGADDR = 0x36
-GPIO2_FEATURE_SET_REGADDR = 0x93
-CHARGE_CONTROL_1_REGADDR = 0x33
-VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR = 0x30
-IRQ_STATUS_3_REGADDR = 0x4a
-I2CAddressAXP209 = 0x34
+POWERMODE_CHARGING_REGADDR: int = 0x01
+IRQ_STATUS_3_REGADDR: int = 0x4a
+IRQ_STATUS_4_REGADDR: int = 0x4b
+ADC_ENABLE_REGADDR: int = 0x82
+POWER_MEASUREMENT_RESULT_REGADDR: int = 0xb9
+PEK_KEY_SETTINGS_REGADDR: int = 0x36
+GPIO2_FEATURE_SET_REGADDR: int = 0x93
+CHARGE_CONTROL_1_REGADDR: int = 0x33
+VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR: int = 0x30
+IRQ_STATUS_3_REGADDR: int = 0x4a
+I2CAddressAXP209: int = 0x34
+
+CONTROL_STATUS_2_REGADDR: int = 0x01
+MINUTE_ALARM_REGADDR: int = 0x09
+HOUR_ALARM_REGADDR: int = 0x0a
+DAY_ALARM_REGADDR: int = 0x0b
+WEEKDAY_ALARM_REGADDR: int = 0xc
+I2CAddressRTC: int = 0x51
 
 # Global variables
 UseGpioLED = False
@@ -273,6 +280,26 @@ def SetMaxPowerDrawUSB_900():
 	Logger.info("Set power draw 900 mA")
 	I2CBus.write_byte_data(I2CAddressAXP209, VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR, 0x60)
 
+def ConfigureRTCAlarm():
+	# Check if we should configure the alarm, the Day_alarm register is set to 0x02 
+	# (ie day 2 in the month, but with AE_D, "alarm enable day" cleared (disabled))
+	dayAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, force=True)
+	if dayAlarm == 0x02:
+		# enable the minute part of the alarm
+		minuteAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, MINUTE_ALARM_REGADDR, force=True)
+		minuteAlarm |= 0x80
+		I2CBus.write_byte_data(I2CAddressRTC, MINUTE_ALARM_REGADDR, minuteAlarm, force=True)
+		# enable the hour part of the alarm
+		hourAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, HOUR_ALARM_REGADDR, force=True)
+		hourAlarm |= 0x80		
+		I2CBus.write_byte_data(I2CAddressRTC, HOUR_ALARM_REGADDR, hourAlarm, force=True)
+		# Clear the day alarm and disable it
+		I2CBus.write_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, 0x00, force=True)
+		# Clear the week day alarm and disable it
+		I2CBus.write_byte_data(I2CAddressRTC, WEEKDAY_ALARM_REGADDR, 0x00, force=True)
+		# enable the "global" interrupt
+		I2CBus.write_byte_data(I2CAddressRTC, CONTROL_STATUS_2_REGADDR, 0x02, force=True)
+
 
 def Shutdown(reason: str):
 	Logger.info(f"Shutdown: {reason}")
@@ -281,7 +308,8 @@ def Shutdown(reason: str):
 	global StatusLEDStateOn
 	StatusLEDStateOn = False
 	BlinkLED()
-
+	
+	ConfigureRTCAlarm()
 	# Sleep so that WiRocPython has time to write "shutting down" on the OLED first
 	time.sleep(0.5)
 	# set shutdown delay to 10 seconds
