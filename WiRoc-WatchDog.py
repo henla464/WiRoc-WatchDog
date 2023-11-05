@@ -43,12 +43,12 @@ WEEKDAY_ALARM_REGADDR: int = 0xc
 I2CAddressRTC: int = 0x51
 
 # Global variables
-UseGpioLED = False
-StatusLEDStateOn = False
-CurrentInterval = NORMAL_INTERVAL
+StatusLEDStateOn: bool = False
+CurrentInterval: int = NORMAL_INTERVAL
 LEDPin = None
 I2CBus = None
-HardwareVersionAndRevision = None
+HardwareVersionAndRevision: str = None
+HardwareVersion: int = None
 Logger = None
 
 
@@ -216,20 +216,12 @@ def BlinkLED():
 	global HardwareVersionAndRevision
 	global LEDPin
 
-	if UseGpioLED:
-		if StatusLEDStateOn:
-			LEDPin.set_value(0)
-			StatusLEDStateOn = False
-		else:
-			LEDPin.set_value(1)
-			StatusLEDStateOn = True
+	if StatusLEDStateOn:
+		subprocess.call(f"echo 'none' > {GreenNanoPiLEDPath}", shell=True)
+		StatusLEDStateOn = False
 	else:
-		if StatusLEDStateOn:
-			subprocess.call(f"echo 'none' > {GreenNanoPiLEDPath}", shell=True)
-			StatusLEDStateOn = False
-		else:
-			subprocess.call(f"echo 'default-on' > {GreenNanoPiLEDPath}", shell=True)
-			StatusLEDStateOn = True
+		subprocess.call(f"echo 'default-on' > {GreenNanoPiLEDPath}", shell=True)
+		StatusLEDStateOn = True
 
 
 CHARGING_SPEEDS = {
@@ -285,18 +277,19 @@ def ConfigureRTCAlarm():
 	# (ie day 2 in the month, but with AE_D, "alarm enable day" cleared (disabled))
 	dayAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, force=True)
 	if dayAlarm == 0x02:
+		Logger.info(f"Enable the wakeup alarm")
 		# enable the minute part of the alarm
 		minuteAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, MINUTE_ALARM_REGADDR, force=True)
-		minuteAlarm |= 0x80
+		minuteAlarm &= 0x7F
 		I2CBus.write_byte_data(I2CAddressRTC, MINUTE_ALARM_REGADDR, minuteAlarm, force=True)
 		# enable the hour part of the alarm
 		hourAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, HOUR_ALARM_REGADDR, force=True)
-		hourAlarm |= 0x80		
+		hourAlarm &= 0x7F
 		I2CBus.write_byte_data(I2CAddressRTC, HOUR_ALARM_REGADDR, hourAlarm, force=True)
 		# Clear the day alarm and disable it
-		I2CBus.write_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, 0x00, force=True)
+		I2CBus.write_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, 0x80, force=True)
 		# Clear the week day alarm and disable it
-		I2CBus.write_byte_data(I2CAddressRTC, WEEKDAY_ALARM_REGADDR, 0x00, force=True)
+		I2CBus.write_byte_data(I2CAddressRTC, WEEKDAY_ALARM_REGADDR, 0x80, force=True)
 		# enable the "global" interrupt
 		I2CBus.write_byte_data(I2CAddressRTC, CONTROL_STATUS_2_REGADDR, 0x02, force=True)
 
@@ -309,7 +302,10 @@ def Shutdown(reason: str):
 	StatusLEDStateOn = False
 	BlinkLED()
 	
-	ConfigureRTCAlarm()
+	global HardwareVersion
+	if HardwareVersion >= 7:
+		ConfigureRTCAlarm()
+		
 	# Sleep so that WiRocPython has time to write "shutting down" on the OLED first
 	time.sleep(0.5)
 	# set shutdown delay to 10 seconds
@@ -347,6 +343,7 @@ def Init():
 	Logger.info("Start")
 
 	global HardwareVersionAndRevision
+	global HardwareVersion
 	global UseGpioLED
 	global LEDPin
 	global I2CBus
@@ -360,15 +357,12 @@ def Init():
 	if "WiRocHWVersion" in settings:
 		HardwareVersionAndRevision = settings["WiRocHWVersion"]
 		HardwareVersionAndRevision = HardwareVersionAndRevision.strip()
+		HardwareVersion = int(HardwareVersionAndRevision.split("Rev")[0][1:])
 		Logger.info("Hardware Version And Revision: " + HardwareVersionAndRevision)
 
 	chip = gpiod.chip('gpiochip0')
-	if (HardwareVersionAndRevision == "v1Rev1" 
-		or HardwareVersionAndRevision == "v2Rev1" 
-		or HardwareVersionAndRevision == "v3Rev1" 
-		or HardwareVersionAndRevision == "v3Rev2"):
-		UseGpioLED = False
-		Logger.info("Using GPIO LED")
+	if HardwareVersionAndRevision == "v3Rev2":
+		Logger.info("Turn off the external LED (we use the LED on the nanopi)")
 
 		chip = gpiod.chip('gpiochip0')
 		configOutput = gpiod.line_request()
@@ -377,6 +371,8 @@ def Init():
 
 		LEDPin = chip.get_line(GpioLedPinNo)
 		LEDPin.request(configOutput)
+		LEDPin.set_value(1)
+
 
 	# Init battery
 	# force ADC enable for battery voltage and current
