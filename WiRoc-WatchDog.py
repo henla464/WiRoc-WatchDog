@@ -276,7 +276,7 @@ def ConfigureRTCAlarm():
 	# Check if we should configure the alarm, the Day_alarm register is set to 0x02 
 	# (ie day 2 in the month, but with AE_D, "alarm enable day" cleared (disabled))
 	dayAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, DAY_ALARM_REGADDR, force=True)
-	if dayAlarm == 0x02:
+	if (dayAlarm & 0x3F) == 0x02:
 		Logger.info(f"Enable the wakeup alarm")
 		# enable the minute part of the alarm
 		minuteAlarm: int = I2CBus.read_byte_data(I2CAddressRTC, MINUTE_ALARM_REGADDR, force=True)
