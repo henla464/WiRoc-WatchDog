@@ -10,9 +10,6 @@ import os.path
 
 # Configuration and settings
 GreenNanoPiLEDPath = "/sys/class/leds/nanopi\\:blue\\:status/trigger"
-GpioLedPinNo = 6
-GpioLEDPath = f"/sys/class/gpio/gpio{GpioLedPinNo}/value"
-GpioLEDExportPath = "/sys/class/gpio/export"
 WARNING_INTERVAL = 0.5
 NORMAL_INTERVAL = 2
 TemperatureLevelWarning = 85.0
@@ -45,7 +42,6 @@ I2CAddressRTC: int = 0x51
 # Global variables
 StatusLEDStateOn: bool = False
 CurrentInterval: int = NORMAL_INTERVAL
-LEDPin = None
 I2CBus = None
 HardwareVersionAndRevision: str = None
 HardwareVersion: int = None
@@ -214,7 +210,6 @@ class Evaluator():
 def BlinkLED():
 	global StatusLEDStateOn
 	global HardwareVersionAndRevision
-	global LEDPin
 
 	if StatusLEDStateOn:
 		subprocess.call(f"echo 'none' > {GreenNanoPiLEDPath}", shell=True)
@@ -344,8 +339,6 @@ def Init():
 
 	global HardwareVersionAndRevision
 	global HardwareVersion
-	global UseGpioLED
-	global LEDPin
 	global I2CBus
 
 
@@ -359,20 +352,6 @@ def Init():
 		HardwareVersionAndRevision = HardwareVersionAndRevision.strip()
 		HardwareVersion = int(HardwareVersionAndRevision.split("Rev")[0][1:])
 		Logger.info("Hardware Version And Revision: " + HardwareVersionAndRevision)
-
-	chip = gpiod.chip('gpiochip0')
-	if HardwareVersionAndRevision == "v3Rev2":
-		Logger.info("Turn off the external LED (we use the LED on the nanopi)")
-
-		chip = gpiod.chip('gpiochip0')
-		configOutput = gpiod.line_request()
-		configOutput.consumer = "wirocwatchdog"
-		configOutput.request_type = gpiod.line_request.DIRECTION_OUTPUT
-
-		LEDPin = chip.get_line(GpioLedPinNo)
-		LEDPin.request(configOutput)
-		LEDPin.set_value(1)
-
 
 	# Init battery
 	# force ADC enable for battery voltage and current
