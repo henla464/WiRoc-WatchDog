@@ -5,7 +5,7 @@ After=default.target
 [Service]
 Type=simple
 WorkingDirectory=/home/chip/WiRoc-WatchDog
-ExecStart=/home/chip/WiRoc-WatchDog/WiRoc-WatchDog.py
+ExecStart=/home/chip/WiRoc-WatchDog/env/bin/python WiRoc-WatchDog.py
 Restart=always
 RestartSec=2
 
