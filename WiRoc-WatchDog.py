@@ -7,6 +7,7 @@ from smbus2 import SMBus
 import logging, logging.handlers
 import os
 import os.path
+from datetime import datetime
 
 # Configuration and settings
 GreenNanoPiLEDPath = "/sys/class/leds/nanopi\\:blue\\:status/trigger"
@@ -18,6 +19,8 @@ TemperatureLevelTooLowForCurrentChargingSpeed = 75.0
 TemperatureLevelError = 90.0
 BatteryLevelWarning: int = 9
 BatteryLevelError: int = 7
+BatteryLevelVoltageWarning: int = 3.2
+BatteryLevelVoltageError: int = 3.0
 
 # Constants
 POWERMODE_CHARGING_REGADDR: int = 0x01
@@ -25,6 +28,9 @@ IRQ_STATUS_3_REGADDR: int = 0x4a
 IRQ_STATUS_4_REGADDR: int = 0x4b
 ADC_ENABLE_REGADDR: int = 0x82
 POWER_MEASUREMENT_RESULT_REGADDR: int = 0xb9
+BATTERY_VOLTAGE_HIGH_REGADDR: int = 0x78
+BATTERY_VOLTAGE_LOW_REGADDR: int = 0x79
+SHUTDOWN_VOLTAGE_REGADDR: int = 0x31
 PEK_KEY_SETTINGS_REGADDR: int = 0x36
 GPIO2_FEATURE_SET_REGADDR: int = 0x93
 CHARGE_CONTROL_1_REGADDR: int = 0x33
@@ -49,11 +55,14 @@ Logger = None
 
 
 class Samplings:
+	Logger = logging.getLogger("WatchDog")
 	SampleReadingsTime = time.monotonic()
 	PreviousTemperature = 0
 	CurrentTemperature = 0
 	PreviousBatteryPercent = 100
+	PreviousBatteryVoltage = 4.2
 	CurrentBatteryPercent = 100
+	CurrentBatteryVoltage = 4.2
 	CurrentIsWiRocBLEAPIActive = True
 	CurrentIsWiRocPythonActive = True
 	CurrentIsWiRocPythonWSActive = True
@@ -72,7 +81,18 @@ class Samplings:
 	@classmethod
 	def GetBatteryPercent(cls):
 		intPercentValue = I2CBus.read_byte_data(I2CAddressAXP209, POWER_MEASUREMENT_RESULT_REGADDR)
+		cls.Logger.info("Battery percentage: " + str(intPercentValue))
 		return intPercentValue
+
+	@classmethod
+	def GetBatteryVoltage(cls):
+		intHighValue = I2CBus.read_byte_data(I2CAddressAXP209, BATTERY_VOLTAGE_HIGH_REGADDR)
+		intLowValue = I2CBus.read_byte_data(I2CAddressAXP209, BATTERY_VOLTAGE_LOW_REGADDR)
+		voltageRaw = (intHighValue << 4) | (intLowValue & 0x0F)
+		voltage_mV = voltageRaw * 1.1  # each bit = 1.1 mV
+		voltage_V = voltage_mV / 1000.0  # convert to volts
+		cls.Logger.info(datetime.now().strftime("%Y-%m-%d %H:%M") +"," + str(voltage_V))
+		return voltage_V
 
 	@classmethod
 	def GetBatteryIsCharging(cls):
@@ -102,7 +122,9 @@ class Samplings:
 			cls.PreviousTemperature = cls.CurrentTemperature
 			cls.CurrentTemperature = cls.GetPMUTemperature()
 			cls.PreviousBatteryPercent = cls.CurrentBatteryPercent
+			cls.PreviousBatteryVoltage = cls.CurrentBatteryVoltage
 			cls.CurrentBatteryPercent = cls.GetBatteryPercent()
+			cls.CurrentBatteryVoltage = cls.GetBatteryVoltage()
 			cls.IsCharging = cls.GetBatteryIsCharging()
 			cls.CurrentIsWiRocBLEAPIActive = cls.GetIsWiRocBLEAPIActive()
 			cls.CurrentIsWiRocPythonActive = cls.GetIsWiRocPythonActive()
@@ -136,8 +158,11 @@ class Evaluator():
 		# Battery percentage returned is inaccurate when charging
 		if Samplings.IsCharging:
 			return False
-		if Samplings.CurrentBatteryPercent <= BatteryLevelWarning:
-			cls.Logger.warning(f"Battery is below {BatteryLevelWarning}%  -- WARNING")
+		#if Samplings.CurrentBatteryPercent <= BatteryLevelWarning:
+		#	cls.Logger.warning(f"Battery is below {BatteryLevelWarning}%  -- WARNING")
+		#	return True
+		if Samplings.CurrentVoltage <= BatteryLevelVoltageWarning:
+			cls.Logger.warning(f"Battery is below {BatteryLevelVoltageWarning}V  -- WARNING")
 			return True
 		return False
 
@@ -181,15 +206,24 @@ class Evaluator():
 
 	@classmethod
 	def IsBatteryError(cls):
-		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}% Battery charging: {Samplings.IsCharging}")
+		cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryVoltage}V Battery charging: {Samplings.IsCharging}")
 		# Battery percentage returned is inaccurate when charging
 		if Samplings.IsCharging:
 			return False
-		if Samplings.CurrentBatteryPercent < BatteryLevelError:
-			cls.Logger.error(f"Battery is below {BatteryLevelError}% ({Samplings.CurrentBatteryPercent}%)")
-			if Samplings.PreviousBatteryPercent < BatteryLevelError:
-				cls.Logger.error(f"Previous Battery was also below {BatteryLevelError}% ({Samplings.PreviousBatteryPercent}%)")
+		if Samplings.CurrentBatteryVoltage < BatteryLevelVoltageError:
+			cls.Logger.error(f"Battery is below {BatteryLevelVoltageError}% ({Samplings.CurrentBatteryVoltage}V)")
+			if Samplings.PreviousBatteryVoltage < BatteryLevelVoltageError:
+				cls.Logger.error(f"Previous Battery was also below {BatteryLevelVoltageError}% ({Samplings.PreviousBatteryVoltage}%)")
 				return True
+		#cls.Logger.debug(f"Battery is: {Samplings.CurrentBatteryPercent}% Battery charging: {Samplings.IsCharging}")
+		# Battery percentage returned is inaccurate when charging
+		#if Samplings.IsCharging:
+		#	return False
+		#if Samplings.CurrentBatteryPercent < BatteryLevelError:
+		#	cls.Logger.error(f"Battery is below {BatteryLevelError}% ({Samplings.CurrentBatteryPercent}%)")
+		#	if Samplings.PreviousBatteryPercent < BatteryLevelError:
+		#		cls.Logger.error(f"Previous Battery was also below {BatteryLevelError}% ({Samplings.PreviousBatteryPercent}%)")
+		#		return True
 		return False
 
 	@classmethod
@@ -206,6 +240,11 @@ class Evaluator():
 			return True
 		return False
 
+def SetShutdownVoltage():
+	# Set voltage shutdwon to 0x02, ie: 2.6 + (0x02) * 0.1 = 2.8 V
+	# 2.8 V appears to mean it shuts down as soon as voltage is below 2.9.
+	I2CBus.write_byte_data(I2CAddressAXP209, SHUTDOWN_VOLTAGE_REGADDR, 0x02)
+	Logger.info("Shutdown voltage set to 2.8 V (ie: shutdown when 2.89999...)")
 
 def BlinkLED():
 	global StatusLEDStateOn
@@ -218,7 +257,6 @@ def BlinkLED():
 		subprocess.call(f"echo 'default-on' > {GreenNanoPiLEDPath}", shell=True)
 		StatusLEDStateOn = True
 
-
 CHARGING_SPEEDS = {
 	7: {"Name": "900", "RegValue": 0xC6},
 	6: {"Name": "800", "RegValue": 0xC5},
@@ -230,38 +268,31 @@ CHARGING_SPEEDS = {
 	0: {"Name": "DISABLED", "RegValue": 0x40},
 }
 
-
 def IncreaseChargingSpeed(ChargingSpeed: int):
 	if ChargingSpeed < 6:
 		ChargingSpeed += 1
 	return ChargingSpeed
-
 
 def DecreaseChargingSpeed(ChargingSpeed: int):
 	if ChargingSpeed > 0:
 		ChargingSpeed -= 1
 	return ChargingSpeed
 
-
 def SetChargingSpeed(ChargeSpeed: int):
 	Logger.info(f"Set charge speed: {CHARGING_SPEEDS[ChargeSpeed]['Name']} ({Samplings.CurrentTemperature}C)")
 	I2CBus.write_byte_data(I2CAddressAXP209, CHARGE_CONTROL_1_REGADDR, CHARGING_SPEEDS[ChargeSpeed]["RegValue"])
-
 
 def SetMaxPowerDrawUSB_NoLimit():
 	Logger.info("Set power draw NO LIMIT")
 	I2CBus.write_byte_data(I2CAddressAXP209, VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR, 0x63)
 
-
 def SetMaxPowerDrawUSB_100():
 	Logger.info("Set power draw 100 mA")
 	I2CBus.write_byte_data(I2CAddressAXP209, VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR, 0x62)
 
-
 def SetMaxPowerDrawUSB_500():
 	Logger.info("Set power draw 500 mA")
 	I2CBus.write_byte_data(I2CAddressAXP209, VBUSIPSOUT_POWER_PATH_MANAGEMENT_REGADDR, 0x61)
-
 
 def SetMaxPowerDrawUSB_900():
 	Logger.info("Set power draw 900 mA")
@@ -296,11 +327,11 @@ def Shutdown(reason: str):
 	global StatusLEDStateOn
 	StatusLEDStateOn = False
 	BlinkLED()
-	
+
 	global HardwareVersion
 	if HardwareVersion >= 7:
 		ConfigureRTCAlarm()
-		
+
 	# Sleep so that WiRocPython has time to write "shutting down" on the OLED first
 	time.sleep(0.5)
 	# set shutdown delay to 10 seconds
@@ -358,7 +389,7 @@ def Init():
 	#i2cset -y -f 0 0x34 0x82 0xC3
 	I2CBus = SMBus(0)  # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1)
 	I2CBus.write_byte_data(I2CAddressAXP209, ADC_ENABLE_REGADDR, 0xC3)
-
+	SetShutdownVoltage()
 	SetMaxPowerDrawUSB_NoLimit()
 
 
