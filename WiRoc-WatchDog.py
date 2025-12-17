@@ -161,7 +161,7 @@ class Evaluator():
 		#if Samplings.CurrentBatteryPercent <= BatteryLevelWarning:
 		#	cls.Logger.warning(f"Battery is below {BatteryLevelWarning}%  -- WARNING")
 		#	return True
-		if Samplings.CurrentVoltage <= BatteryLevelVoltageWarning:
+		if Samplings.CurrentBatteryVoltage <= BatteryLevelVoltageWarning:
 			cls.Logger.warning(f"Battery is below {BatteryLevelVoltageWarning}V  -- WARNING")
 			return True
 		return False
